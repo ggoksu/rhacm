@@ -1,0 +1,125 @@
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: dev
+  namespace: dev
+  labels:
+    cloud: 'AWS'
+    region: 'us-east-1'
+    vendor: 'OpenShift'
+spec:
+  baseDomain: b609.sandbox1059.opentlc.com
+  clusterName: dev
+  controlPlaneConfig:
+    servingCertificates: {}
+  installed: false
+  platform:
+    aws:
+      credentialsSecretRef:
+        name: dev-aws-creds
+      region: us-east-1
+  provisioning:
+    installConfigSecretRef:
+      name: dev-install-config
+    sshPrivateKeySecretRef:
+      name: dev-ssh-private-key
+    imageSetRef:
+       #quay.io/openshift-release-dev/ocp-release:4.5.2-x86_64
+      name: img4.5.2-x86-64
+  pullSecretRef:
+    name: dev-pull-secret
+---
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  labels:
+    cloud: Amazon
+    name: dev
+    environment: 'dev'
+    vendor: OpenShift
+  name: dev
+spec:
+  hubAcceptsClient: true
+---
+apiVersion: hive.openshift.io/v1
+kind: MachinePool
+metadata:
+  name: dev-worker
+  namespace: dev
+spec:
+  clusterDeploymentRef:
+    name: dev
+  name: worker
+  platform:
+    aws:
+      rootVolume:
+        iops: 100
+        size: 100
+        type: gp2
+      type: m5.xlarge
+  replicas: 3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dev-pull-secret
+  namespace: dev
+stringData:
+  # Docker Config JSON
+  .dockerconfigjson:
+type: kubernetes.io/dockerconfigjson
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dev-install-config
+  namespace: dev
+type: Opaque
+data:
+  # Base64 encoding of install-config yaml
+  install-config.yaml:
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dev-ssh-private-key
+  namespace: dev
+stringData:
+  # SSH Private Key
+  ssh-privatekey: |-
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: dev-aws-creds
+  namespace: dev
+stringData:
+  # AWS Access keys
+  aws_access_key_id: 
+  aws_secret_access_key:
+---
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: dev
+  namespace: dev
+spec:
+  clusterName: dev
+  clusterNamespace: dev
+  clusterLabels:
+    cloud: Amazon
+    vendor: OpenShift
+  applicationManager:
+    enabled: true
+  policyController:
+    enabled: true
+  searchCollector:
+    enabled: true
+  certPolicyController:
+    enabled: true
+  iamPolicyController:
+    enabled: true
+  version: 2.0.0
+
